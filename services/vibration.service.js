@@ -49,6 +49,8 @@ class VibrationService extends EventEmitter {
     super();
     this.latest = null;
     this.timer = null;
+    this.alertQueue = []; // Queue for pending alerts
+    this.isProcessingQueue = false;
     
     // Reload environment variables in constructor
     this.reloadConfig();
@@ -56,9 +58,13 @@ class VibrationService extends EventEmitter {
     console.log("VibrationService initialized for:", {
       equipmentId: this.equipmentId,
       location: this.location,
+      recipients: this.alertRecipients,
       thresholds: VELOCITY_THRESHOLDS,
       cooldown: ALERT_COOLDOWN_MS
     });
+
+    // Start queue processor
+    this.processAlertQueue();
 
     // Bubble up Modbus connection state
     modbus.on("connected", () => {
@@ -78,7 +84,19 @@ class VibrationService extends EventEmitter {
     
     this.equipmentId = process.env.EQUIPMENT_ID || "DEFAULT-001";
     this.location = process.env.LOCATION || "Default Location";
-    this.alertRecipient = process.env.ALERT_RECIPIENT || "alltechnify@gmail.com";
+    
+    // Parse multiple email recipients from environment variable
+    // Can be comma-separated or space-separated
+    const recipientsStr = process.env.ALERT_RECIPIENTS;
+    this.alertRecipients = recipientsStr
+      .split(/[,\s]+/)
+      .map(email => email.trim())
+      .filter(email => email.includes('@'));
+    
+    // Also support single recipient for backward compatibility
+    if (process.env.ALERT_RECIPIENT && !this.alertRecipients.length) {
+      this.alertRecipients = [process.env.ALERT_RECIPIENT];
+    }
     
     // Update thresholds from env if available
     if (process.env.WARNING_MIN) {
@@ -129,15 +147,70 @@ class VibrationService extends EventEmitter {
     return null;
   }
 
-  async poll() {
-    // Debug: Print current environment values
-    console.log("[ENV CHECK]", {
-      EQUIPMENT_ID: process.env.EQUIPMENT_ID,
-      LOCATION: process.env.LOCATION,
-      current_equipmentId: this.equipmentId,
-      current_location: this.location
+  // Queue alert for parallel processing
+  queueAlert(alertData) {
+    this.alertQueue.push({
+      ...alertData,
+      queuedAt: Date.now()
     });
+    console.log(`[ALERT QUEUED] Queue size: ${this.alertQueue.length}`);
+  }
 
+  // Process alert queue in background
+  async processAlertQueue() {
+    while (true) {
+      if (this.alertQueue.length > 0 && !this.isProcessingQueue) {
+        this.isProcessingQueue = true;
+        const alert = this.alertQueue.shift();
+        
+        try {
+          console.log(`[PROCESSING ALERT] Sending to ${alert.recipients.length} recipients`);
+          
+          // Send emails in parallel to all recipients
+          const emailPromises = alert.recipients.map(recipient => 
+            sendVibrationAlert(
+              recipient,
+              alert.vibrationData,
+              alert.limitValue,
+              alert.alertLevel
+            ).catch(error => {
+              console.error(`[EMAIL ERROR] Failed to send to ${recipient}:`, error.message);
+              return null; // Don't fail other emails
+            })
+          );
+
+         
+
+          // Wait for all emails to complete (or fail) in parallel
+          const results = await Promise.allSettled(emailPromises);
+          
+          const successful = results.filter(r => r.status === 'fulfilled' && r.value).length;
+          const failed = results.filter(r => r.status === 'rejected' || !r.value).length;
+          
+          console.log(`[ALERT COMPLETE] Success: ${successful}, Failed: ${failed}`);
+
+          // Emit alert event for websocket
+          this.emit("alert", {
+            level: alert.alertLevel,
+            velocityRMS: alert.vibrationData.value,
+            thresholds: VELOCITY_THRESHOLDS,
+            timestamp: new Date().toISOString(),
+            recipients: alert.recipients.length
+          });
+
+        } catch (error) {
+          console.error("[QUEUE PROCESSING ERROR]", error.message);
+        } finally {
+          this.isProcessingQueue = false;
+        }
+      }
+      
+      // Small delay to prevent CPU spinning
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+  }
+
+  async poll() {
     if (this.reading) return; // 🔒 prevent overlap
     this.reading = true;
 
@@ -161,16 +234,16 @@ class VibrationService extends EventEmitter {
       const velocityRMS = r[4] * 0.01; // Convert to mm/s
 
       const values = {
-      accel: {
-        rms: r[0],               // mg
-        max: r[1],               // mg
-        peakToPeak: r[2]         // mg
-      },
-      crestFactor: r[3] * 0.01,
-      velocity: {
-        rms: r[4] * 0.01         // mm/s
-      }
-    };
+        accel: {
+          rms: r[0],               // mg
+          max: r[1],               // mg
+          peakToPeak: r[2]         // mg
+        },
+        crestFactor: r[3] * 0.01,
+        velocity: {
+          rms: r[4] * 0.01         // mm/s
+        }
+      };
 
       // Check velocity RMS against thresholds
       const alertLevel = this.checkVelocityAlert(velocityRMS);
@@ -179,7 +252,7 @@ class VibrationService extends EventEmitter {
         // Create a unique key for this alert type and equipment
         const alertKey = `${this.equipmentId}-${alertLevel}`;
         
-        // Check cooldown before sending alert
+        // Check cooldown before queueing alert
         if (this.shouldSendAlert(alertKey, alertLevel)) {
           const vibrationData = {
             value: velocityRMS,
@@ -194,53 +267,43 @@ class VibrationService extends EventEmitter {
             ? VELOCITY_THRESHOLDS.CRITICAL_MIN 
             : VELOCITY_THRESHOLDS.WARNING_MAX;
 
-          console.log(`[ALERT] Sending ${alertLevel.toUpperCase()} alert - Velocity RMS: ${velocityRMS.toFixed(2)} mm/s`);
+          console.log(`[ALERT TRIGGERED] ${alertLevel.toUpperCase()} - Velocity RMS: ${velocityRMS.toFixed(2)} mm/s`);
           console.log("[ALERT DATA]", {
             equipmentId: this.equipmentId,
             location: this.location,
-            recipient: this.alertRecipient
+            recipients: this.alertRecipients
           });
 
-          // Send email alert
-          await sendVibrationAlert(
-            this.alertRecipient,
+          // Queue alert for background processing (non-blocking)
+          this.queueAlert({
+            recipients: this.alertRecipients,
             vibrationData,
             limitValue,
-            alertLevel
-          );
-
-          
-
-          // Emit alert event for websocket if needed
-          this.emit("alert", {
-            level: alertLevel,
-            velocityRMS,
-            thresholds: VELOCITY_THRESHOLDS,
-            timestamp: new Date().toISOString()
+            alertLevel,
+            sendLegacy: true // Set to false if you don't want legacy emails
           });
         }
       } else {
         console.log(`[NORMAL] Velocity RMS: ${velocityRMS.toFixed(2)} mm/s (within limits)`);
       }
 
-      // Save to MongoDB
-      // await VibrationReading.create({
+      // Save to MongoDB (non-blocking - don't await)
+      // VibrationReading.create({
       //   ...values,
       //   equipmentId: this.equipmentId,
       //   location: this.location,
       //   alertLevel: alertLevel || 'normal'
-      // });
+      // }).catch(err => console.error("[DB SAVE ERROR]", err.message));
 
       // Prepare sample data for websocket
-       const sample = {
-      ok: true,
-      at: new Date(),
-      values,
-     
-    };
+      const sample = {
+        ok: true,
+        at: new Date(),
+        values,
+      };
 
       // Send to websocket
-      this.emit("data",sample );
+      this.emit("data", sample);
 
       console.log("[MODBUS PARSED]", {
         ...raw,
@@ -269,13 +332,15 @@ class VibrationService extends EventEmitter {
     if (config.location) {
       this.location = config.location;
     }
-    if (config.alertRecipient) {
-      this.alertRecipient = config.alertRecipient;
+    if (config.alertRecipients) {
+      this.alertRecipients = Array.isArray(config.alertRecipients) 
+        ? config.alertRecipients 
+        : [config.alertRecipients];
     }
     console.log("[CONFIG UPDATED]", {
       equipmentId: this.equipmentId,
       location: this.location,
-      alertRecipient: this.alertRecipient
+      alertRecipients: this.alertRecipients
     });
   }
 
