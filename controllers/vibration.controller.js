@@ -18,6 +18,9 @@ export const getHistory = async (req, res) => {
   const docs = await VibrationReading.find(q)
     .sort({ timestamp: -1 })
     .limit(Number(limit));
+
+
+
   return res.json({ ok: true, count: docs.length, data: docs });
 };
 

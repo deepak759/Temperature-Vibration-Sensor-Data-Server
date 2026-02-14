@@ -11,19 +11,13 @@ const VibrationSchema = new mongoose.Schema({
   },
   crestFactor: Number,
 
-  raw: {
-    type: Object
-  },
+timestamp: { type: Date, default: Date.now, index: true },
 
-  device: {
-    type: String,
-    default: "iSN-713"
-  },
+  
 
-  at: {
-    type: Date,
-    default: Date.now
-  }
+
+},{
+  versionKey: false
 });
 
 export default mongoose.model("VibrationReading", VibrationSchema);
