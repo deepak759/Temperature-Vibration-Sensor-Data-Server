@@ -367,8 +367,8 @@ const sendVibrationAlert = async (recipientEmail, vibrationData, limitValue, ale
 
     // Customize subject based on alert level
     const alertSubject = alertLevel === 'critical' 
-      ? `🚨 CRITICAL: Vibration Alert - Value ${vibrationData.value} mm/s exceeded limit ${limitValue} mm/s`
-      : `⚠️ WARNING: Vibration Alert - Value ${vibrationData.value} mm/s exceeded limit ${limitValue} mm/s`;
+      ? `UNO Minda Ltd: CRITICAL: Vibration Alert - Value ${vibrationData.value} mm/s exceeded limit ${limitValue} mm/s`
+      : `UNO Minda Ltd: WARNING: Vibration Alert - Value ${vibrationData.value} mm/s exceeded limit ${limitValue} mm/s`;
 
     const options = {
       from: "game6112002@gmail.com",

@@ -289,10 +289,8 @@ class VibrationService extends EventEmitter {
 
       // Save to MongoDB (non-blocking - don't await)
       // VibrationReading.create({
-      //   ...values,
-      //   equipmentId: this.equipmentId,
-      //   location: this.location,
-      //   alertLevel: alertLevel || 'normal'
+      //   ...values
+       
       // }).catch(err => console.error("[DB SAVE ERROR]", err.message));
 
       // Prepare sample data for websocket
