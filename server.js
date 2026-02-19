@@ -9,6 +9,10 @@ import vibrationRoutes from "./routes/vibration.routes.js";
 // import temperatureRoutes from "./routes/temperature.routes.js";
 import { sensorSocket } from "./sockets/sensorSocket.js";
 import { vibrationService } from "./services/vibration.service.js";
+import userRoutes from "./routes/user.routes.js";
+import plantRoutes from "./routes/plant.routes.js";
+import adminRoutes from "./routes/admin.routes.js";
+import godadminRoutes from "./routes/godadmin.routes.js";
 
 dotenv.config();
 const app = express();
@@ -25,14 +29,18 @@ app.use(cors());
 connectDB();
 
 // Routes
-app.use("/api/vibration", vibrationRoutes);
+// app.use("/api/vibration", vibrationRoutes);
+app.use("/api/auth", userRoutes);
+app.use("/api/plants", plantRoutes);
+app.use("/api/admin", adminRoutes);
+app.use("/api/godadmin", godadminRoutes);
 // app.use("/api/temperature", temperatureRoutes);
 
 // WebSocket
-sensorSocket(io);
+// sensorSocket(io);
 
 // Start polling
-vibrationService.start();
+// vibrationService.start();
 
 const PORT = process.env.PORT || 5000;
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));

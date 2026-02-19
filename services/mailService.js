@@ -387,4 +387,143 @@ const sendVibrationAlert = async (recipientEmail, vibrationData, limitValue, ale
   }
 };
 
-export { sendMail, sendFeedbackMail, sendVibrationAlert };
+// Send credentials email when admin/godadmin creates a user
+const sendCredentialsMail = async (recipientEmail, username, password, role, plantName) => {
+  try {
+    const htmlTemplate = `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <style>
+          body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+          }
+          .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 20px;
+            border: 1px solid #90e0ef;
+            border-radius: 8px;
+          }
+          .header {
+            text-align: center;
+            color: #000000;
+            font-size: 20px;
+            font-weight: bold;
+          }
+          .credentials-box {
+            background-color: #f8f9fa;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #219ebc;
+          }
+          .credential-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #dee2e6;
+          }
+          .credential-row:last-child {
+            border-bottom: none;
+          }
+          .label {
+            font-weight: bold;
+            color: #495057;
+          }
+          .value {
+            color: #212529;
+            font-family: monospace;
+            background-color: #ffffff;
+            padding: 4px 8px;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+          }
+          .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            padding: 15px;
+            border-radius: 6px;
+            margin: 20px 0;
+            color: #856404;
+          }
+          .footer {
+            text-align: center;
+            font-size: 0.9rem;
+            color: #888;
+            margin-top: 20px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="email-container">
+          <h2 class="header">Welcome to Vibration Monitoring System</h2>
+          <p>Hi ${username},</p>
+          <p>Your account has been created by an administrator. Below are your login credentials:</p>
+          
+          <div class="credentials-box">
+            <div class="credential-row">
+              <span class="label">Username:</span>
+              <span class="value">${username}</span>
+            </div>
+            <div class="credential-row">
+              <span class="label">Email:</span>
+              <span class="value">${recipientEmail}</span>
+            </div>
+            <div class="credential-row">
+              <span class="label">Password:</span>
+              <span class="value">${password}</span>
+            </div>
+            <div class="credential-row">
+              <span class="label">Role:</span>
+              <span class="value">${role}</span>
+            </div>
+            ${plantName ? `
+            <div class="credential-row">
+              <span class="label">Plant Access:</span>
+              <span class="value">${plantName}</span>
+            </div>
+            ` : ''}
+          </div>
+          
+          <div class="warning">
+            <strong>⚠️ Important:</strong> Please change your password after your first login for security purposes.
+          </div>
+          
+          <p>You can now login to the system using these credentials. No email verification is required as your account has been pre-verified.</p>
+          
+          <p>If you have any questions, please contact your system administrator.</p>
+          
+          <div class="footer">
+            &copy; 2026 UNO MINDA. All rights reserved.
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const options = {
+      from: "game6112002@gmail.com",
+      to: recipientEmail,
+      subject: "Your Vibration Monitoring System Account Credentials",
+      html: htmlTemplate,
+    };
+
+    const result = await transporter.sendMail(options);
+    console.log("Credentials email sent successfully.", result.messageId);
+    return result;
+
+  } catch (error) {
+    console.log(`Error in sending credentials email: ${error}.`);
+    throw error;
+  }
+};
+
+export { sendMail, sendFeedbackMail, sendVibrationAlert, sendCredentialsMail };
