@@ -12,7 +12,10 @@ import { vibrationService } from "./services/vibration.service.js";
 import userRoutes from "./routes/user.routes.js";
 import plantRoutes from "./routes/plant.routes.js";
 import adminRoutes from "./routes/admin.routes.js";
+
 import godadminRoutes from "./routes/godadmin.routes.js";
+// dummy Data
+import { generateDummyData } from "./utils/dummyGenerator.js";
 
 dotenv.config();
 const app = express();
@@ -42,5 +45,9 @@ app.use("/api/godadmin", godadminRoutes);
 // Start polling
 // vibrationService.start();
 
-const PORT = process.env.PORT || 5000;
+
+// dummy data
+generateDummyData(io);
+
+const PORT = process.env.PORT || 7000;
 httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));

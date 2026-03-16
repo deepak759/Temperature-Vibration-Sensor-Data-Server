@@ -1,12 +1,19 @@
-import { saveVibrationSample, saveTemperatureSample } from "../services/sensorData.js";
-
 export const generateDummyData = (io) => {
   setInterval(async () => {
     const vibration = {
-      x: Math.random(),
-      y: Math.random(),
-      z: Math.random(),
-      rms: Math.random(), // or compute from x/y/z
+      // or compute from x/y/z
+
+     values: {
+        accel: {
+          rms: Number((Math.random() * 5).toFixed(2)),
+          max: Number((Math.random() * 5).toFixed(2)),
+          peakToPeak: Number((Math.random() * 5).toFixed(2)),
+        },
+        velocity: {
+          rms: Number((Math.random() * 5).toFixed(2)),
+        },
+        crestFactor: Number((Math.random()).toFixed(2)),
+      }
     };
 
     const temperature = {
@@ -14,8 +21,8 @@ export const generateDummyData = (io) => {
     };
 
     // Emit to clients
-    io.emit("vibration-data", vibration);
-    io.emit("temperature-data", temperature);
+    io.emit('vibration-data', vibration);
+    io.emit('temperature-data', temperature);
 
     // Persist in DB
     // try {
