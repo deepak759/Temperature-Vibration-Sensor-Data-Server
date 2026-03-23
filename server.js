@@ -29,7 +29,7 @@ app.use(express.json());
 app.use(cors());
 
 // DB
-connectDB();
+// connectDB();
 
 // Routes
 // app.use("/api/vibration", vibrationRoutes);
