@@ -14,6 +14,6 @@ spec:
     spec:
       containers:
       - name: node-app
-        image: yourusername/node-backend
+        image: deepaksharma611/node-backend
         ports:
         - containerPort: 3000
