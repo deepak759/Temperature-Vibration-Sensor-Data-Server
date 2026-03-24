@@ -5,6 +5,7 @@ pipeline {
         DOCKER_IMAGE = "deepaksharma611/node-backend"
     }
 
+
     stages {
 
         stage('Clone') {
