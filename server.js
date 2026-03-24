@@ -30,7 +30,11 @@ app.use(cors());
 
 // DB
 // connectDB();
+import os from "os";
 
+app.get("/", (req, res) => {
+  res.send(`Pod: ${os.hostname()}`);
+});
 // Routes
 // app.use("/api/vibration", vibrationRoutes);
 app.use("/api/auth", userRoutes);
@@ -49,5 +53,5 @@ app.use("/api/godadmin", godadminRoutes);
 // dummy data
 generateDummyData(io);
 
-const PORT = process.env.PORT || 7000;
-httpServer.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, "0.0.0.0", () => console.log(`Server running on port ${PORT}`));
