@@ -8,13 +8,7 @@ pipeline {
 
     stages {
 
-        stage('Clone') {
-            steps {
-                git branch: 'CI/CD',
-                    url: 'https://github.com/deepak759/Temperature-Vibration-Sensor-Data-Server.git',
-                    credentialsId: 'github-creds'
-            }
-        }
+        docker
 
         stage('Build Docker Image') {
             steps {
