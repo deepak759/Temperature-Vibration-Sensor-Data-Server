@@ -5,13 +5,15 @@ pipeline {
         DOCKER_IMAGE = "deepaksharma611/node-backend"
     }
 
-    stage('Clone') {
-    steps {
-        git branch: 'CI/CD',
-            url: 'https://github.com/deepak759/Temperature-Vibration-Sensor-Data-Server.git',
-            credentialsId: 'github-creds'
-    }
-}
+    stages {
+
+        stage('Clone') {
+            steps {
+                git branch: 'CI/CD',
+                    url: 'https://github.com/deepak759/Temperature-Vibration-Sensor-Data-Server.git',
+                    credentialsId: 'github-creds'
+            }
+        }
 
         stage('Build Docker Image') {
             steps {
@@ -35,3 +37,4 @@ pipeline {
             }
         }
     }
+}
